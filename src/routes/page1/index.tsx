@@ -1,21 +1,26 @@
 import {
   component$,
   Slot,
-  useSignal,
+  useContext,
+  useContextProvider,
+  useStore,
   useStylesScoped$,
   useTask$,
 } from "@builder.io/qwik";
-
-type Colors = "black" | "red";
+import { type InputData, InputDataContext } from "./context";
 
 export default component$(() => {
-  const color = useSignal<Colors>("black");
-  const value = useSignal("");
+  const data = useStore<InputData>({
+    color: "black",
+    value: "",
+  });
+
+  useContextProvider(InputDataContext, data);
 
   useTask$(({ track }) => {
-    track(() => value.value);
+    const value = track(() => data.value);
 
-    color.value = value.value.toLowerCase() === "llama" ? "red" : "black";
+    data.color = value.toLowerCase() === "llama" ? "red" : "black";
   });
 
   return (
@@ -26,34 +31,32 @@ export default component$(() => {
         type="text"
         placeholder="Type your search"
         onInput$={(event) =>
-          (value.value = (event.target as HTMLInputElement).value)
+          (data.value = (event.target as HTMLInputElement).value)
         }
       />
       <hr />
-      <YouTyped color={color.value} value={value.value}>
-        The value of the above input is:
-      </YouTyped>
+      <YouTyped>The value of the above input is:</YouTyped>
     </div>
   );
 });
 
-export const YouTyped = component$(
-  ({ color, value }: { color: Colors; value: string }) => {
-    useStylesScoped$(
-      `
-        span:first-child:empty::before {
-          content: "You typed:";
-        }
-      `
-    );
+export const YouTyped = component$(() => {
+  const { color, value } = useContext(InputDataContext);
 
-    return (
-      <p>
-        <span>
-          <Slot />
-        </span>{" "}
-        <span style={`color: ${color};`}>{value}</span>
-      </p>
-    );
-  }
-);
+  useStylesScoped$(
+    `
+      span:first-child:empty::before {
+        content: "You typed:";
+      }
+    `
+  );
+
+  return (
+    <p>
+      <span>
+        <Slot />
+      </span>
+      <span style={`color: ${color};`}> {value}</span>
+    </p>
+  );
+});
